@@ -1,0 +1,10 @@
+# Vaporeon
+
+Application for transforming data in a streamfashion.
+
+## TODO
+
+* Change chain to node.
+  Node will have to fields: in & outs (vec). In need to implement source and out needs to implement drain (either a drain or a node that consists of transformer as in and more drain).
+* Create transformers that implement both source and drain
+* each source, drain and trasnformer should be able to create relevant component based on config string so that config files can be loaded
