@@ -1,10 +1,10 @@
 use crate::drains;
-use crate::sources;
+use crate::sources::{self, *};
 
 use std::thread;
 use std::sync::mpsc;
 
-pub struct Chain {
+pub struct NodeRoot {
     /// source takes a trait object (a struct that implements the trait Source)
     source: Box<dyn sources::Source + Send + Sync>,
 
@@ -12,10 +12,18 @@ pub struct Chain {
     drain: Box<dyn drains::Drain + Send + Sync>,
 }
 
-impl Chain {
-    pub fn new() -> Chain {
-        Chain { 
-            source: Box::new(sources::Counter::new(5)),
+pub struct Node {
+    /// source takes a trait object (a struct that implements the trait Source)
+    source: Box<dyn sources::Source + Send + Sync>,
+
+    /// drain takes a trait object (a struct that implements the trait Drain)
+    drain: Box<dyn drains::Drain + Send + Sync>,
+}
+
+impl NodeRoot {
+    pub fn new() -> NodeRoot {
+        NodeRoot { 
+            source: Box::new(counter::Counter::new(5)),
             drain: Box::new(drains::Logger::new()),
         }
     }
