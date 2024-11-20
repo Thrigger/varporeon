@@ -1,4 +1,4 @@
-use std::sync::mpsc::Receiver;
+use crossbeam_channel::Receiver;
 use std::sync::Arc;
 use log::{warn, error};
 
@@ -12,17 +12,12 @@ impl Logger {
 }
 
 impl Drain for Logger {
-    fn start(&self, rx: Receiver<Arc<[u8]>>) {
-        loop {
-            match rx.recv() {
-                Err(e) => {error!("Sender closed channel: {e}"); break;},
-                Ok(r) => warn!("Got: {:?}", r),
-            };
-        }
+    fn run(&self, r: Arc<[u8]>) {
+        warn!("Got: {:?}", r);
     }
 }
 
 pub trait Drain {
-    fn start(&self, rx: Receiver<Arc<[u8]>>);
+    fn run(&self, rx: Arc<[u8]>);
 }
 
