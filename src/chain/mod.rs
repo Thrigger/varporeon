@@ -2,16 +2,16 @@ use crate::components::{self, *};
 use crate::sources::{self, *};
 
 use std::thread;
-use log::error;
-use crossbeam_channel::Sender;
-use crossbeam_channel::Receiver;
+use log::{debug, error};
+use bus::{Bus, BusReader};
 use std::sync::Arc;
+use std::time;
 
 pub struct NodeRoot {
     /// source takes a trait object (a struct that implements the trait Source)
-    source: Box<dyn sources::Source + Send + Sync>,
+    component: Box<dyn sources::Source + Send + Sync>,
 
-    next: Node,
+    next: Vec<Node>,
 }
 
 pub struct Node {
@@ -19,60 +19,59 @@ pub struct Node {
     component: Box<dyn Drain>,
 
     /// drain takes a trait object (a struct that implements the trait Drain)
-    next: Vec<Box<Node>>,
-    //next: Option<Box<Node>>,
+    next: Vec<Node>,
 }
 
 unsafe impl Send for Node{}
-unsafe impl Sync for Node{}
+//unsafe impl Sync for Node{}
 
 impl Node {
     pub fn new() -> Node {
         Node { 
             component: Box::new(components::Logger::new()),
-            next: vec![Box::new(Node::new_out())],
-            //next: Some(Box::new(Node::new_out())),
+            next: vec![],
         }
     }
+
+    pub fn new_simple_cfg(mut cfg: Vec<&str>) -> Node {
+        let mut comp = cfg.remove(0).split("[").collect::<Vec<&str>>();
+        if comp.len() > 1 {
+            comp[1] = &comp[1][..comp[1].len()-1];
+            debug!("Creating new component {} with cfg {}", comp[0], comp[1]);
+        } else {
+            debug!("Creating new component {} with no cfg", comp[0]);
+        }
+
+        let new_comp = match comp[0] {
+        //    "logger" => components::Logger::new(),
+            "loggerOut" => components::LoggerOut::new(),
+            _ => panic!("not yet implemented"),
+        };
+
+        if cfg.len() == 0 {
+            return Node { 
+                    component: Box::new(new_comp),
+                    next: vec![],
+                };
+        }
+
+        Node { 
+            component: Box::new(new_comp),
+            next: vec![Node::new_simple_cfg(cfg)],
+        }
+    }
+
     pub fn new_out() -> Node {
         Node { 
             component: Box::new(components::LoggerOut::new()),
             next: vec![],
-            //next: None,
         }
     }
-    pub fn init_node(&self, rx_from_parent: Receiver<Arc<[u8]>>) {
-        if self.next.len() > 0 {
-        //if self.next.is_some() {
-            // This is not end node
-            let (tx, rx_to_next) = crossbeam_channel::unbounded();
-            //let _drain_thread_join_handle = thread::spawn(move || {
-            //    self.next.as_ref().unwrap().init_node(rx_to_next);
-            //});
-            for child in &self.next {
-                let _drain_thread_join_handle = thread::spawn(move || {
-                    child.init_node(rx_to_next);
-                });
-            }
 
-            loop {
-                let Ok(r) = rx_from_parent.recv() else {
-                    error!("Sender closed channel"); 
-                    break;
-                };
-                if let Some(buf) = self.component.run(r) {
-                    tx.send(buf);
-                }
-            }
-        
-        } else {
-            // This is an output
-            loop {
-                let Ok(r) = rx_from_parent.recv() else {
-                    error!("Sender closed channel"); 
-                    break;
-                };
-                self.component.run(r);
+    pub fn run(&self, data: &[u8]) {
+        if let Some(new_data) = self.component.run(data) {
+            for each in &self.next {
+                each.run(data);
             }
         }
     }
@@ -80,24 +79,40 @@ impl Node {
 
 impl NodeRoot {
     pub fn new() -> NodeRoot {
-        NodeRoot { 
-            source: Box::new(counter::Counter::new(5)),
-            next: Node::new(),
+        NodeRoot {
+            component: Box::new(counter::Counter::new(5)),
+            next: vec![Node::new_out()],
         }
     }
 
-    pub fn start(self) {
-        let (tx, rx) = crossbeam_channel::unbounded();
-        let _source_thread_join_handle = thread::spawn(move || {
-            self.source.start(tx)
-        });
-        let _drain_thread_join_handle = thread::spawn(move || {
-            self.next.init_node(rx);
-        });
+    pub fn new_simple_cfg(cfg: &str) -> NodeRoot {
+        let mut parts = cfg.split(">").collect::<Vec<&str>>();
+        if parts.len() == 0 {
+            error!("cfg is invalide");
+            panic!("cfg is invalide");
+        } 
 
-        // TODO add better monitoring of threads. It would be nice to replace .join() since it is
-        // blocking.
-        let res = _drain_thread_join_handle.join();
-        println!("Res: {:?}", res);
+        let mut input = parts.remove(0).split("[").collect::<Vec<&str>>();
+        input[1] = &input[1][..input[1].len()-1];
+        debug!("Creating new input {} with cfg {}", input[0], input[1]);
+
+        NodeRoot {
+            component: Box::new(match input[0] {
+                "counter" => counter::Counter::new(5),
+                _ => {error!("input is invalid"); panic!("")},
+            }),
+            next: vec![Node::new_simple_cfg(parts)],
+        }
+    }
+
+    pub fn start(&mut self) {
+        loop {
+            if let Some(buf) = self.component.get_input() {
+                for each in &self.next {
+                    each.run(&buf);
+                }
+            }
+            thread::sleep(time::Duration::from_secs(1));
+        }
     }
 }

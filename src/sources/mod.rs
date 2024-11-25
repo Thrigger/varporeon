@@ -4,5 +4,5 @@ use std::sync::Arc;
 pub mod counter;
 
 pub trait Source {
-    fn start(&self, sender: Sender<Arc<[u8]>>);
+    fn get_input(&mut self) -> Option<Vec<u8>>;
 }

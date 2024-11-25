@@ -1,33 +1,28 @@
 use super::Source;
 
-use crossbeam_channel::{unbounded, Sender};
 use log::info;
 use std::sync::Arc;
-use std::time;
 use std::thread;
 
 pub struct Counter {
+    counter: usize,
     stop: usize,
 }
 
 impl Counter {
     pub fn new(stop: usize) -> Self {
-        Self { stop }
+        Self { stop, counter: 0 }
     }
 }
 
 impl Source for Counter {
-    fn start(&self, sender: Sender<Arc<[u8]>>) {
-        let mut i: usize = 0;
-        loop {
-            let i_u8 = i.to_be_bytes();
-            info!("Sending: {:?}", i_u8);
-            sender.send(i_u8.into()).unwrap();
-            i += 1;
-            i %= self.stop;
-            
-            thread::sleep(time::Duration::from_secs(1));
-        }
+    fn get_input(&mut self) -> Option<Vec<u8>> {
+        let i_u8 = self.counter.to_be_bytes().to_vec();
+        info!("Counting: {:?}", i_u8);
+        self.counter += 1;
+        self.counter %= self.stop;
+        
+        Some(i_u8)
     }
 }
 

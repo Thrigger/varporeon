@@ -20,19 +20,19 @@ impl LoggerOut {
 }
 
 impl Drain for Logger {
-    fn run(&self, r: Arc<[u8]>) -> Option<Arc<[u8]>> {
+    fn run(&self, r: &[u8]) -> Option<Vec<u8>> {
         warn!("Got: {:?}", r);
-        Some(r)
+        Some(r.to_vec())
     }
 }
 impl Drain for LoggerOut {
-    fn run(&self, r: Arc<[u8]>) -> Option<Arc<[u8]>> {
+    fn run(&self, r: &[u8]) -> Option<Vec<u8>> {
         warn!("Got: {:?}", r);
         None
     }
 }
 
 pub trait Drain {
-    fn run(&self, rx: Arc<[u8]>) -> Option<Arc<[u8]>>;
+    fn run(&self, rx: &[u8]) -> Option<Vec<u8>>;
 }
 
