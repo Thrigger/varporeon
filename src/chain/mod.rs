@@ -23,14 +23,15 @@ pub struct Node {
 }
 
 unsafe impl Send for Node{}
-//unsafe impl Sync for Node{}
 
 impl Node {
-    pub fn new() -> Node {
-        Node { 
-            component: Box::new(components::Logger::new()),
-            next: vec![],
+    fn create_component(cfg: &Vec<&str>) -> Option<Box<dyn Drain>> {
+        if cfg[0] == "loggerOut" {
+            return Some(Box::new(components::LoggerOut::new()));
+        } else if cfg[0] == "logger" {
+            return Some(Box::new(components::Logger::new()));
         }
+        None
     }
 
     pub fn new_simple_cfg(mut cfg: Vec<&str>) -> Node {
@@ -42,21 +43,21 @@ impl Node {
             debug!("Creating new component {} with no cfg", comp[0]);
         }
 
-        let new_comp = match comp[0] {
-        //    "logger" => components::Logger::new(),
-            "loggerOut" => components::LoggerOut::new(),
-            _ => panic!("not yet implemented"),
+        let Some(new_comp) = Self::create_component(&comp) else {
+            error!("Config is wrong! ->{:?}", comp);
+            panic!();
         };
 
         if cfg.len() == 0 {
+            // No child node so this is last.
             return Node { 
-                    component: Box::new(new_comp),
+                    component: new_comp,
                     next: vec![],
                 };
         }
 
         Node { 
-            component: Box::new(new_comp),
+            component: new_comp,
             next: vec![Node::new_simple_cfg(cfg)],
         }
     }
@@ -73,18 +74,13 @@ impl Node {
             for each in &self.next {
                 each.run(data);
             }
+        } else {
+            debug!("Could not produce any output from the input");
         }
     }
 }
 
 impl NodeRoot {
-    pub fn new() -> NodeRoot {
-        NodeRoot {
-            component: Box::new(counter::Counter::new(5)),
-            next: vec![Node::new_out()],
-        }
-    }
-
     pub fn new_simple_cfg(cfg: &str) -> NodeRoot {
         let mut parts = cfg.split(">").collect::<Vec<&str>>();
         if parts.len() == 0 {
@@ -93,12 +89,19 @@ impl NodeRoot {
         } 
 
         let mut input = parts.remove(0).split("[").collect::<Vec<&str>>();
-        input[1] = &input[1][..input[1].len()-1];
-        debug!("Creating new input {} with cfg {}", input[0], input[1]);
+        let input_cfg;
+        if input.len() > 1 {
+            input[1] = &input[1][..input[1].len()-1];
+            debug!("Creating new input {} with cfg {}", input[0], input[1]);
+            input_cfg = Some(input[1].parse::<usize>().unwrap());
+        } else {
+            debug!("Creating new input {} with no cfg", input[0]);
+            input_cfg = None;
+        }
 
         NodeRoot {
             component: Box::new(match input[0] {
-                "counter" => counter::Counter::new(5),
+                "counter" => counter::Counter::new(input_cfg),
                 _ => {error!("input is invalid"); panic!("")},
             }),
             next: vec![Node::new_simple_cfg(parts)],

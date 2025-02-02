@@ -7,8 +7,8 @@ fn main() {
     info!("Starting Vaporeon in CLI mode");
 
     let config: &str = "
-counter[5]>logOutput
-counter[1]>logOutput";
+counter[5]>logger>logger>loggerOut
+counter[2]>loggerOut";
 
     let mut thread_handles = vec![];
     for each in config.lines() {

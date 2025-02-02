@@ -10,8 +10,11 @@ pub struct Counter {
 }
 
 impl Counter {
-    pub fn new(stop: usize) -> Self {
-        Self { stop, counter: 0 }
+    pub fn new(stop: Option<usize>) -> Self {
+        match stop {
+            Some(u) => Self { stop: u, counter: 0 },
+            None => Self { stop: 10, counter: 0 }
+        }
     }
 }
 

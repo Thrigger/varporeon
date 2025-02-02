@@ -21,13 +21,13 @@ impl LoggerOut {
 
 impl Drain for Logger {
     fn run(&self, r: &[u8]) -> Option<Vec<u8>> {
-        warn!("Got: {:?}", r);
+        warn!("Logger - Got: {:?}", r);
         Some(r.to_vec())
     }
 }
 impl Drain for LoggerOut {
     fn run(&self, r: &[u8]) -> Option<Vec<u8>> {
-        warn!("Got: {:?}", r);
+        warn!("LoggerOut - Got: {:?}", r);
         None
     }
 }
