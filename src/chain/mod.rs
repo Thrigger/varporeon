@@ -2,7 +2,7 @@ use crate::components::{self, *};
 use crate::sources::{self, *};
 
 use std::thread;
-use log::{debug, error};
+use log::{debug, error, warn};
 use bus::{Bus, BusReader};
 use std::sync::Arc;
 use std::time;
@@ -81,7 +81,20 @@ impl Node {
 }
 
 impl NodeRoot {
-    pub fn new_simple_cfg(cfg: &str) -> NodeRoot {
+    pub fn new_simple_chains(cfg: &str) -> Vec<NodeRoot> {
+            let mut tmp_chains = vec![];
+            for each in cfg.lines() {
+                debug!("Parsing line:{:?}", each);
+                if each != "" && &each[..1] != "#" {
+                    tmp_chains.push(Self::new_simple_chain(each));
+                } else {
+                    warn!("Faulty simple config:{}", cfg);
+                }
+            }
+            tmp_chains
+    }
+
+    pub fn new_simple_chain(cfg: &str) -> NodeRoot {
         let mut parts = cfg.split(">").collect::<Vec<&str>>();
         if parts.len() == 0 {
             error!("cfg is invalide");
