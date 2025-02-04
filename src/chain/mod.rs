@@ -2,8 +2,9 @@ use crate::components::{self, *};
 use crate::sources::{self, *};
 
 use std::thread;
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use bus::{Bus, BusReader};
+
 use std::sync::Arc;
 use std::time;
 
@@ -32,6 +33,28 @@ impl Node {
             return Some(Box::new(components::Logger::new()));
         }
         None
+    }
+
+    pub fn new(mut cfg: &toml::Value) -> Node {
+        let Some(new_comp) = Self::create_component(&vec![&cfg["drain"].as_str().unwrap()]) else {
+            error!("Config is wrong! ->{:#?}", cfg);
+            panic!();
+        };
+
+        let mut node = Node {
+            component: new_comp,
+            next: vec![],
+        };
+
+        let nexts = cfg["next"].as_array().unwrap();
+        for n in nexts {
+            info!("this is next:{:#?}", n);
+            info!("This is name:{:#?}", cfg[n.as_str().unwrap()]);
+
+            node.next.push(Node::new(&cfg[n.as_str().unwrap()]));
+        }
+
+        node
     }
 
     pub fn new_simple_cfg(mut cfg: Vec<&str>) -> Node {
@@ -81,6 +104,40 @@ impl Node {
 }
 
 impl NodeRoot {
+    pub fn new_chains(cfg: &toml::Table) -> Vec<NodeRoot> {
+        let mut tmp_chains = vec![];
+        for each in cfg {
+            debug!("Parsing rootNode:{:#?}", each);
+
+            tmp_chains.push(Self::new_chain(each));
+        }
+        tmp_chains
+    }
+
+    pub fn new_chain(cfg: (&String, &toml::Value)) -> NodeRoot {
+        let mut nodeRoot = NodeRoot {
+                component: Box::new(match cfg.1["source"].as_str().unwrap() {
+                    "counter" => counter::Counter::new(Some(3)),
+                    _ => {error!("input is invalid"); panic!("")},
+                }),
+                next: vec![],
+            };
+        let nexts = cfg.1["next"].as_array().unwrap();
+        for n in nexts {
+            info!("this is name of next:{:#?}", n);
+            info!("This is content of next:{:#?}", cfg.1[n.as_str().unwrap()]);
+
+            nodeRoot.next.push(Node::new(&cfg.1[n.as_str().unwrap()]));
+
+            //let mut child_name = each.0.to_owned();
+            //child_name.push_str(".");
+            //child_name.push_str(n.as_str().unwrap());
+            //info!("This is name:{:#?}", child_name);
+            //info!("This is more:{:#?}", conf_file[&child_name]);
+        }
+        nodeRoot
+    }
+
     pub fn new_simple_chains(cfg: &str) -> Vec<NodeRoot> {
             let mut tmp_chains = vec![];
             for each in cfg.lines() {

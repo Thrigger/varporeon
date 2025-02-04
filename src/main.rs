@@ -33,11 +33,7 @@ fn main() {
 
     let chains: Vec<chain::NodeRoot> = match cli.use_simple_cfg {
         true => vaporeon::chain::NodeRoot::new_simple_chains(&contents),
-        false => {
-            let conf_file: ConfigFile = toml::from_str(&contents).expect("Parse toml file");
-            info!("toml-file as config_file:\n{:#?}", conf_file);
-            vec![]
-        },
+        false => vaporeon::chain::NodeRoot::new_chains(&contents.parse::<toml::Table>().expect("Parse toml file")),
     };
 
     let mut thread_handles = vec![];

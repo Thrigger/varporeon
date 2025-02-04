@@ -1,0 +1,25 @@
+[dummy_id1]
+source='counter'
+stop=3
+next=[ 'child1' ]
+
+[dummy_id1.child1]
+drain='loggerOut'
+next=[]
+
+[dummy_id2]
+source='counter'
+stop=3
+next=[ 'child1', 'child2' ]
+
+[dummy_id2.child1]
+drain='logger'
+next=[ 'child1' ]
+
+[dummy_id2.child1.child1]
+drain='loggerOut'
+next=[]
+
+[dummy_id2.child2]
+drain='loggerOut'
+next=[]
