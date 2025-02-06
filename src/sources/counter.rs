@@ -10,11 +10,12 @@ pub struct Counter {
 }
 
 impl Counter {
-    pub fn new(stop: Option<usize>) -> Self {
-        match stop {
-            Some(u) => Self { stop: u, counter: 0 },
-            None => Self { stop: 10, counter: 0 }
-        }
+    pub fn new(args: &Vec<(&str, String)>) -> Self {
+        //match stop {
+        //    Some(u) => Self { stop: u, counter: 0 },
+        //    None => Self { stop: 10, counter: 0 }
+        //}
+        Self { stop: 10, counter: 0 }
     }
 }
 

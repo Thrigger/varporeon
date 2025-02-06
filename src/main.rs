@@ -19,11 +19,6 @@ struct Cli {
     use_simple_cfg: bool,
 }
 
-/// Struct for the Toml file to parse
-#[derive(Deserialize,Debug)]
-struct ConfigFile {
-}
-
 fn main() {
     env_logger::init();
     info!("Starting Vaporeon in CLI mode");
